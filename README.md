@@ -2,7 +2,9 @@
 
 A browser-local tool for inspecting Android signing certificates. It reads signing keystores, public certificates and APKs on your device, shows SHA-256 and SHA-1 fingerprints, and compares a selected certificate with an APK's verified signer. Files, passwords and results are not uploaded or stored by the application.
 
-**Website:** [Coming soon](https://example.com) (placeholder; replace after deployment).
+**Website:** [keystore-validator.vercel.app](https://keystore-validator.vercel.app/)
+
+![Keystore Validator website](docs/screenshot.png)
 
 ## How to use
 
@@ -30,7 +32,7 @@ npm run preview
 
 `npm run build` uses the included, checksum-checked WASM assets, so Go is not required on Vercel. If the engine source changes, rebuild those assets with Go 1.24 or newer using `npm run build:wasm`, then include the updated files under `public/` with your changes. The current assets were built with Go 1.27.4.
 
-Vercel can build this as a Vite project using `npm run build` and the `dist` output directory. The static security headers are configured in `vercel.json`; local preview uses those same headers. `.vercelignore` excludes common signing files from CLI uploads and restricts the deployment inputs. No server function or environment variable is required. The first deployment is intentionally left to the project owner.
+Vercel can build this as a Vite project using `npm run build` and the `dist` output directory. The static security headers are configured in `vercel.json`; local preview uses those same headers. `.vercelignore` excludes common signing files from CLI uploads and restricts the deployment inputs. No server function or environment variable is required.
 
 ## Supported inputs and limits
 
