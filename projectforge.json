@@ -1,0 +1,3651 @@
+{
+  "schema_version": "1.3.0",
+  "project": {
+    "id": "keystore-validator",
+    "name": "Keystore Validator",
+    "summary": "A privacy-first browser application for inspecting Android signing certificates and comparing an APK signer with a keystore certificate.",
+    "problem_statement": "Android developers need to inspect the fingerprints in a JKS keystore and confirm whether a signed APK was signed by the same certificate without exposing private signing material.",
+    "target_audience": [
+      "Android developers and release engineers"
+    ],
+    "goals": [
+      "Read and display signing certificate fingerprints from a supplied JKS keystore.",
+      "Inspect an APK signature and compare its verified signing certificate with a selected keystore certificate.",
+      "Keep APKs, keystores, private keys, and passwords in the browser while hosting the application on a Vercel Hobby account."
+    ],
+    "classification": "web_app",
+    "platforms": [
+      "Modern desktop web browsers",
+      "Vercel static hosting"
+    ],
+    "identifiers": [],
+    "scope": {
+      "included": [
+        "Browser-local JKS inspection and alias selection",
+        "Browser-local APK signing certificate inspection and signature verification",
+        "SHA-256 certificate comparison with clear match, mismatch and unverifiable outcomes",
+        "Hobby-compatible static deployment and privacy-focused user experience"
+      ],
+      "excluded": [
+        "Signing or modifying APKs",
+        "Uploading files, passwords, or private keys",
+        "Account creation, database, server-side file handling, or long-term storage",
+        "AAB inspection and Play Console integration for the initial release",
+        "Claiming APK install/update compatibility merely from matching a certificate"
+      ]
+    },
+    "existing_repository": {
+      "path": "/Users/trinadhthatakula/PyProjects/keystoreValidator",
+      "inspected": true,
+      "observations": [
+        "Workspace was empty, with no existing Git repository or application files when discovery began."
+      ]
+    }
+  },
+  "discovery": {
+    "mode": "standard",
+    "started_at": "2026-11-19T19:17:35Z",
+    "updated_at": "2026-11-19T19:19:28Z",
+    "notes": [
+      "Standard mode selected for a security-sensitive browser application with signing and deployment constraints.",
+      "The user confirmed both APKs and keystores should be processed in the browser and APKs of at least 100 MB should be supported.",
+      "The user prefers Python but explicitly permits alternatives; TypeScript is recommended for the privacy-preserving browser runtime.",
+      "A generated JKS was read with keystore-go v4.5.0 via Go/WASM in Node; the resulting SHA-256 matched keytool and a wrong store password failed. Not tested in a browser.",
+      "Official apksigner is available locally in Android SDK build-tools 36.1.0; it has not yet been used to verify an APK fixture in this project.",
+      "APK experiment: apksig-go v1.1.0 disagreed with apksigner on an AOSP v2-only fixture for API 24-35; both rejected one tampered v1/v2/v3 fixture, while the candidate exposed verified signer flags despite an overall failure. Do not use candidate flags without overall verification and independent coverage."
+    ]
+  },
+  "facts": [
+    {
+      "id": "product",
+      "topic": "Purpose",
+      "value": "Extract JKS and APK signing certificate fingerprints and compare them.",
+      "status": "confirmed",
+      "source": "User project request"
+    },
+    {
+      "id": "browser",
+      "topic": "Sensitive processing",
+      "value": "Process JKS and APK files in the browser. Do not transmit private keys, files or passwords.",
+      "status": "confirmed",
+      "source": "User discovery replies and follow-up"
+    },
+    {
+      "id": "size",
+      "topic": "APK size",
+      "value": "Support APKs of at least 100 MB.",
+      "status": "confirmed",
+      "source": "User discovery reply"
+    },
+    {
+      "id": "hosting",
+      "topic": "Hosting",
+      "value": "Deploy to a Hobby Vercel account.",
+      "status": "confirmed",
+      "source": "User project request"
+    },
+    {
+      "id": "language",
+      "topic": "Language preference",
+      "value": "Python preferred; other languages may be proposed.",
+      "status": "confirmed",
+      "source": "User project request"
+    },
+    {
+      "id": "empty",
+      "topic": "Existing code",
+      "value": "The workspace was initially empty and not a Git repository.",
+      "status": "verified",
+      "source": "Local workspace inspection"
+    },
+    {
+      "id": "vercel-limit",
+      "topic": "Vercel function limit",
+      "value": "Vercel Functions impose a 4.5 MB request or response body limit.",
+      "status": "verified",
+      "source": "https://vercel.com/docs/functions/limitations"
+    },
+    {
+      "id": "privacy-design",
+      "topic": "Privacy architecture",
+      "value": "Serve static assets from Vercel and process all selected files locally; comparison needs no server.",
+      "status": "recommended",
+      "source": "Architecture synthesis"
+    }
+  ],
+  "technology": {
+    "preferences": [
+      "Python for development where appropriate; user explicitly permits an alternative."
+    ],
+    "selected": [
+      "TypeScript browser application (recommended working choice)",
+      "Web Workers and browser File/Blob APIs (design recommendation)",
+      "WebAssembly verifier only if the feasibility and security gates pass",
+      "Vercel static hosting"
+    ],
+    "alternatives": [
+      "Python server: rejected for file handling because it would violate browser-local processing and server request size limits.",
+      "Python local scripts: optional for fixture generation or cross-checks; not a production file-processing backend.",
+      "Investigate Go/WASM plus TypeScript: a JKS alias/certificate experiment succeeded under Node, but browser and APK-verification gates remain open."
+    ],
+    "compatibility_evidence": [
+      {
+        "statement": "The Vercel function body limit makes typical large APK uploads unsuitable; static browser processing avoids the function upload path.",
+        "status": "verified",
+        "source": "https://vercel.com/docs/functions/limitations"
+      },
+      {
+        "statement": "apksig-go advertises v1/v2/v3/v3.1 support and a browser WASM API; its browser integration copies the complete APK into Go memory and its correctness and size limits have not been verified here.",
+        "status": "pending",
+        "source": "https://github.com/agusibrahim/apksig-go"
+      },
+      {
+        "statement": "A browser JKS library that verifies store integrity and lists certificate aliases without decrypting private keys has not yet been validated.",
+        "status": "pending",
+        "source": "https://github.com/lenchv/jks-js"
+      },
+      {
+        "statement": "A generated JKS was inspected with keystore-go v4.5.0 compiled to Go/WASM and executed under Node. The alias and certificate SHA-256 matched keytool; a wrong store password failed. This is a narrow proof, not a browser, malformed-input or APK verifier test.",
+        "status": "verified",
+        "source": "Local generated fixture: Go 1.27.4, Node 26.13.1, keytool; keystore-go https://github.com/pavlo-v-chernykh/keystore-go"
+      },
+      {
+        "statement": "A narrow Node/WASM differential experiment with apksig-go v1.1.0 and AOSP golden APKs found a disagreement on a valid v2-only APK: apksigner verifies it for API 24-35, while the candidate rejects it based on manifest minSdk 23. A tampered v1/v2/v3 APK was rejected overall by both, but individual signer verified flags remained true in the candidate. This is not a browser or security audit.",
+        "status": "verified",
+        "source": "AOSP golden fixtures https://android.googlesource.com/platform/tools/apksig/+/refs/heads/main/src/test/resources/com/android/apksig/ and local Android SDK build-tools 37.0.0 apksigner"
+      }
+    ]
+  },
+  "features": [
+    {
+      "id": "jks",
+      "name": "Inspect a keystore",
+      "description": "Read the selected JKS in a worker; request only the store password and expose aliases with public certificates.",
+      "priority": "must",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "Detect and report unsupported or corrupt files without exposing secrets; validate JKS integrity when a password is provided and distinguish an incorrect password or integrity failure.",
+        "List certificate-bearing aliases; allow selection and display subject, issuer, validity dates, certificate SHA-256 and SHA-1 fingerprints.",
+        "Do not request a separate private-key password or decrypt or export private keys just to display certificates.",
+        "Compare generated fixture results against keytool -list -v, including multiple aliases, trusted-certificate entries and wrong passwords."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "apk",
+      "name": "Inspect and verify an APK",
+      "description": "Read the APK locally, verify supported Android signing schemes and show verified signer certificate details.",
+      "priority": "must",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "Show SHA-256 and SHA-1 certificate fingerprints and scheme verification results for each active signer if available; label certificate extraction and signature validity separately.",
+        "Verify applicable v1/v2/v3/v3.1 signatures and APK contents within the explicitly stated Android API range; unsupported schemes, rotation, malformed, tampered, unsigned and ambiguous cases must be identified and never reported as verified.",
+        "Cross-check verification results and signer fingerprints against official apksigner fixtures for supported API ranges, including valid, tampered, unsigned, multi-signer and rotated-key inputs.",
+        "Handle APK files of at least 100 MB on tested target browsers; report progress, allow cancellation and return a clear resource-limit error when needed.",
+        "Consider the verifier overall result and content integrity; individual signer verified flags alone cannot establish that an APK verifies."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "compare",
+      "name": "Compare certificates",
+      "description": "Compare the selected keystore certificate to the verified APK signer certificate locally.",
+      "priority": "must",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "Use SHA-256 of the DER-encoded signing certificate for canonical identity; SHA-1 is display-only.",
+        "Show matched, mismatched, and unverifiable states; never assert signature validity or a successful verified match solely because an extracted certificate fingerprint matches.",
+        "For multiple signers or rotation show each signer and whether the selected certificate is active or historical; do not imply Android update compatibility from a single matching signer.",
+        "Explain Google Play app-signing keys versus upload keys when relevant."
+      ],
+      "depends_on": [
+        "jks",
+        "apk"
+      ]
+    },
+    {
+      "id": "privacy",
+      "name": "Browser-local handling",
+      "description": "Keep file contents and secrets on the user device.",
+      "priority": "must",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "No request contains the APK, keystore bytes, private keys, password, alias or fingerprint; verify using browser network instrumentation.",
+        "Do not store sensitive input in browser storage or logs; keep temporary state in memory and drop references and terminate workers on reset.",
+        "Avoid third-party runtime scripts or telemetry; serve bundled assets from the same origin and use restrictive security headers compatible with the chosen WASM build."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "usability",
+      "name": "Accessible and clear interaction",
+      "description": "Provide an accessible, responsive interface for selecting files, entering the store password, and understanding results.",
+      "priority": "must",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "Use labeled controls, keyboard navigation, visible focus and text alternatives; report loading, progress, success and failure accessibly.",
+        "Explain that files stay on the device and that password integrity validation is distinct from checking certificate expiry or APK signature validity."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "pkcs12",
+      "name": "PKCS#12 keystores",
+      "description": "Detect PKCS#12 by contents even if a filename uses .jks, when a reviewed browser library supports it.",
+      "priority": "should",
+      "status": "recommended",
+      "acceptance_criteria": [
+        "Do not misidentify a PKCS#12 store as a JKS file; if unsupported, clearly report the format.",
+        "If enabled, verify behavior with keytool-generated fixtures and document alias and password limitations."
+      ],
+      "depends_on": []
+    }
+  ],
+  "architecture": {
+    "summary": "Vercel serves a static TypeScript web UI and same-origin worker/WASM assets. User-selected APK and keystore bytes are read locally, with no file-processing backend. A verified browser-capable signing engine remains a required feasibility gate.",
+    "components": [
+      {
+        "id": "hosting",
+        "name": "Vercel static hosting",
+        "description": "Deliver first-party HTML, CSS, JavaScript and reviewed local WASM assets over HTTPS."
+      },
+      {
+        "id": "ui",
+        "name": "Browser UI",
+        "description": "Collect files and store password locally, render progress and alias choices, and display signer and matching outcomes."
+      },
+      {
+        "id": "worker",
+        "name": "Browser worker",
+        "description": "Own ephemeral local parsing, fingerprint calculation, cancellation and controlled error handling."
+      },
+      {
+        "id": "engine",
+        "name": "Signing inspection engine",
+        "description": "Candidate JKS and APK verifier implementations; must pass feasibility, security, memory and differential tests before selection."
+      }
+    ],
+    "flows": [
+      {
+        "from": "hosting",
+        "to": "ui",
+        "label": "First-party static assets over HTTPS"
+      },
+      {
+        "from": "ui",
+        "to": "worker",
+        "label": "Local File objects and store password only"
+      },
+      {
+        "from": "worker",
+        "to": "engine",
+        "label": "Local certificate extraction and signature verification"
+      },
+      {
+        "from": "worker",
+        "to": "ui",
+        "label": "Local results; no server transmission"
+      }
+    ]
+  },
+  "data_api": {
+    "datastores": [
+      "None for user files, passwords or results."
+    ],
+    "apis": [
+      "No server-side file-processing API."
+    ],
+    "authentication": [
+      "No account or authentication required for the initial release."
+    ],
+    "decisions": []
+  },
+  "constraints": {
+    "security_privacy": [
+      "Private keys and passwords must never leave the browser. APKs and keystores are processed locally.",
+      "Avoid private-key decryption for certificate inspection; no secrets in telemetry, logs, URLs or persistent storage.",
+      "Treat the delivered site and its dependencies as part of the trust boundary; restrict scripts and network connections, review updates, and avoid claims of absolute security."
+    ],
+    "offline": "Processing should continue without network after all app assets are loaded; installable/offline-first service worker is not required initially.",
+    "monetization": "No monetization requested; Hobby suitability for personal, non-commercial use must be checked before release.",
+    "performance": [
+      "Support at least 100 MB APKs on measured desktop browsers, with worker responsiveness and bounded or clearly documented memory use.",
+      "Benchmark peak memory and time; browser memory constraints mean no universal size guarantee."
+    ],
+    "accessibility": [
+      "Keyboard access, semantic labels, visible focus and readable error/progress messages; verify in target browsers."
+    ],
+    "localization": [
+      "English initially as an assumption; use text resources that can later be localized."
+    ],
+    "deployment": [
+      "Deploy a static build to Vercel Hobby; do not rely on server functions to receive files.",
+      "Keep a preview release and verify assets and security headers before promotion."
+    ],
+    "budget": "Hobby account requested; usage-dependent bandwidth and build costs or limits must be checked against current Vercel terms."
+  },
+  "capability_report": {
+    "generated_at": "2026-11-19T19:19:28Z",
+    "runtime": {
+      "name": "codex",
+      "detected": true,
+      "version": null,
+      "session_availability": "unverified",
+      "session_inventory_complete": false,
+      "evidence": [
+        "Codex session environment marker detected",
+        "Local discovery cannot verify tools exposed by the current conversation session"
+      ]
+    },
+    "skills": [
+      {
+        "name": "adaptive",
+        "description": "Instructions to make or update an app's UI so that it adapts to different",
+        "source": "/Users/trinadhthatakula/.codex/skills/adaptive/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "agp-9-upgrade",
+        "description": "Upgrades, or migrates, an Android project to use Android Gradle Plugin",
+        "source": "/Users/trinadhthatakula/.codex/skills/agp-9-upgrade/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "android-cli",
+        "description": "Provides instructions for installing and using the `android` CLI. The `android` command-line tool is a critical tool for Android development and helps you create new Android projects, install APKs onto devices and emulators and launch and run apps on them, manage and interact with Android virtual devices (including screenshots and UI inspection), manage Android SDK components, look up official Android documentation, and discover and install official Android skills.",
+        "source": "/Users/trinadhthatakula/.codex/skills/android-cli/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "appfunctions",
+        "description": "Analyzes Android apps to identify key user workflows for AppFunctions",
+        "source": "/Users/trinadhthatakula/.codex/skills/appfunctions/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "asgard-ui",
+        "description": ">-",
+        "source": "/Users/trinadhthatakula/.codex/skills/asgard-ui/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "azure-image-generation",
+        "description": "Generate image assets through the user's Azure GPT-Image deployment using the shared global helper. Use when asked to create images with Azure; not for image critique or text-only art direction.",
+        "source": "/Users/trinadhthatakula/.codex/skills/azure-image-generation/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "camera1-to-camerax",
+        "description": "Use this skill to migrate legacy Android camera implementations (Camera1",
+        "source": "/Users/trinadhthatakula/.codex/skills/camera1-to-camerax/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "display-ai-glasses-with-jetpack-compose-glimmer",
+        "description": "Provides guidelines for developing projected applications for Android",
+        "source": "/Users/trinadhthatakula/.codex/skills/display-ai-glasses-with-jetpack-compose-glimmer/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "display-glasses-with-jetpack-compose-glimmer",
+        "description": "Provides guidelines for developing projected Android XR apps for display",
+        "source": "/Users/trinadhthatakula/.codex/skills/display-glasses-with-jetpack-compose-glimmer/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "edge-to-edge",
+        "description": "Use this skill to migrate your Jetpack Compose app to add adaptive edge-to-edge",
+        "source": "/Users/trinadhthatakula/.codex/skills/edge-to-edge/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "ego-browser",
+        "description": "When you need a browser, read this Skill by default. Use it to open and operate websites, fill forms, click buttons, take screenshots, extract page data, sign in, and perform other browser automation tasks, as well as web app testing, dogfooding, QA, bug investigation, and app-quality review. ego-browser (ego-lite) is a Chromium browser designed for both human users and AI Agents. Agents can use the user's logged-in websites and personal context to complete tasks and collaborate smoothly with the user through the browser interface. Therefore, prefer ego-browser over built-in browsers or other web tools.",
+        "source": "/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "engage-sdk-integration",
+        "description": "Helps developers integrate, debug, and resolve Play Engage SDK implementation",
+        "source": "/Users/trinadhthatakula/.codex/skills/engage-sdk-integration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "imagekitchen",
+        "description": "Generate one or more images from prompts using existing ImageKitchen provider profiles and return saved image paths. Use when ImageKitchen is installed and configured.",
+        "source": "/Users/trinadhthatakula/.codex/skills/imagekitchen/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "jetpack-compose-m3",
+        "description": "Expert guidance for working with Wear OS Compose Material3. Use this",
+        "source": "/Users/trinadhthatakula/.codex/skills/jetpack-compose-m3/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "migrate-xml-views-to-jetpack-compose",
+        "description": "Provides a structured workflow for migrating an Android XML View to Jetpack",
+        "source": "/Users/trinadhthatakula/.codex/skills/migrate-xml-views-to-jetpack-compose/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "navigation-3",
+        "description": "Learn how to install and migrate to Jetpack Navigation 3, and how to",
+        "source": "/Users/trinadhthatakula/.codex/skills/navigation-3/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "odin",
+        "description": "Integrate or migrate the Odin Android root-shell and RootService library in an app. Use for com.trinadhthatakula:odin, privileged shell execution, isolated job cancellation, root refresh, or Binder code running as root.",
+        "source": "/Users/trinadhthatakula/.codex/skills/odin/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "perfetto-sql",
+        "description": "Translates natural language data intents into syntactically valid Perfetto",
+        "source": "/Users/trinadhthatakula/.codex/skills/perfetto-sql/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "perfetto-trace-analysis",
+        "description": "Analyzes Perfetto traces to find the root cause of latency, memory, or",
+        "source": "/Users/trinadhthatakula/.codex/skills/perfetto-trace-analysis/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "play-billing-library-version-upgrade",
+        "description": "Use this skill when upgrading or migrating an Android project from any",
+        "source": "/Users/trinadhthatakula/.codex/skills/play-billing-library-version-upgrade/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "r8-analyzer",
+        "description": "Analyzes Android build files and R8 keep rules to identify redundancies,",
+        "source": "/Users/trinadhthatakula/.codex/skills/r8-analyzer/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "styles",
+        "description": "Use this skill to integrate the Jetpack Compose Styles API into an Android",
+        "source": "/Users/trinadhthatakula/.codex/skills/styles/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "testing-setup",
+        "description": "Analyze and create a testing strategy for native Android apps - install",
+        "source": "/Users/trinadhthatakula/.codex/skills/testing-setup/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "verified-email",
+        "description": "Provides a complete workflow for implementing verified email retrieval",
+        "source": "/Users/trinadhthatakula/.codex/skills/verified-email/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "android-for-cars-parked-apps",
+        "description": "Adapt existing Android video streaming apps, games, and web browsers",
+        "source": "/Users/trinadhthatakula/.agents/skills/android-for-cars-parked-apps/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "android-intent-security",
+        "description": "Audits, detects, and remediates Android Intent and component security",
+        "source": "/Users/trinadhthatakula/.agents/skills/android-intent-security/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "android-permissions-security",
+        "description": "Audits, detects gaps, and remediates Android permissions and IPC component",
+        "source": "/Users/trinadhthatakula/.agents/skills/android-permissions-security/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "android-profiler",
+        "description": "'Records and analyzes Android performance data and diagnoses performance",
+        "source": "/Users/trinadhthatakula/.agents/skills/android-profiler/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "anr-audit-and-fix",
+        "description": "Audits Android codebases for ANR risks and diagnoses ANR stack dumps.",
+        "source": "/Users/trinadhthatakula/.agents/skills/anr-audit-and-fix/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "camerax",
+        "description": "Provide technical guidance for Android camera development with CameraX.",
+        "source": "/Users/trinadhthatakula/.agents/skills/camerax/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "find-skills",
+        "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
+        "source": "/Users/trinadhthatakula/.agents/skills/find-skills/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "firebase-basics",
+        "description": ">-",
+        "source": "/Users/trinadhthatakula/.agents/skills/firebase-basics/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "gemini-api",
+        "description": "Use when the user asks about using Gemini in an enterprise environment or explicitly mentions Vertex AI, Google Cloud, or Agent Platform. Guides the usage of the Gemini API on Agent Platform with the Google Gen AI SDK. Covers SDK usage (Python, JS/TS, Go, Java, C#), capabilities like multimodal inputs, tools, media generation, caching, batch prediction, and Live API.",
+        "source": "/Users/trinadhthatakula/.agents/skills/gemini-api/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "glance-appwidget-updates-and-memory",
+        "description": "Manages Android AppWidget state updates, background syncs, and RemoteViews",
+        "source": "/Users/trinadhthatakula/.agents/skills/glance-appwidget-updates-and-memory/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "glance-canonical-layouts",
+        "description": "Use this skill to create home screen widgets using Jetpack Glance Canonical",
+        "source": "/Users/trinadhthatakula/.agents/skills/glance-canonical-layouts/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "ink-app-builder",
+        "description": "Adds inking and freehand drawing capabilities to an Android app using",
+        "source": "/Users/trinadhthatakula/.agents/skills/ink-app-builder/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "ink-custom-brush-builder",
+        "description": "Creates custom BrushFamily definitions for an Android app using Jetpack",
+        "source": "/Users/trinadhthatakula/.agents/skills/ink-custom-brush-builder/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "jetpack-compose-performance",
+        "description": "Diagnose and optimize Android Jetpack Compose UI code. Use this skill",
+        "source": "/Users/trinadhthatakula/.agents/skills/jetpack-compose-performance/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "kotlin-backend-jpa-entity-mapping",
+        "description": ">",
+        "source": "/Users/trinadhthatakula/.agents/skills/kotlin-backend-jpa-entity-mapping/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "kotlin-tooling-agp9-migration",
+        "description": ">",
+        "source": "/Users/trinadhthatakula/.agents/skills/kotlin-tooling-agp9-migration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "kotlin-tooling-cocoapods-spm-migration",
+        "description": "Migrate KMP projects from CocoaPods (kotlin(\"native.cocoapods\")) to Swift Package Manager (swiftPMDependencies DSL) — replaces pod() with swiftPackage(), transforms cocoapods.* imports to swiftPMImport.*, and reconfigures the Xcode project.",
+        "source": "/Users/trinadhthatakula/.agents/skills/kotlin-tooling-cocoapods-spm-migration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "kotlin-tooling-immutable-collections-0-5-x-migration",
+        "description": ">",
+        "source": "/Users/trinadhthatakula/.agents/skills/kotlin-tooling-immutable-collections-0-5-x-migration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "kotlin-tooling-java-to-kotlin",
+        "description": ">",
+        "source": "/Users/trinadhthatakula/.agents/skills/kotlin-tooling-java-to-kotlin/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "leanback-to-compose-tv-migration",
+        "description": "Provides instructions and architectural patterns for migrating Android",
+        "source": "/Users/trinadhthatakula/.agents/skills/leanback-to-compose-tv-migration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "litert-lm",
+        "description": "Builds an Android app that runs an open text LLM on the device, on the",
+        "source": "/Users/trinadhthatakula/.agents/skills/litert-lm/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "litert-runtime",
+        "description": "Configures and implements LiteRT (.tflite) on-device inference on Android",
+        "source": "/Users/trinadhthatakula/.agents/skills/litert-runtime/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "media3-cast-integration",
+        "description": "Implements Google Cast support in Android apps using Jetpack Media3.",
+        "source": "/Users/trinadhthatakula/.agents/skills/media3-cast-integration/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "microsoft-foundry",
+        "description": "Build, deploy, evaluate, optimize, fine-tune, and manage Microsoft Foundry agents, models, and resources end to end. USE FOR: foundry, azd ai agent, azd provision/deploy, hosted agent scaffold/develop/run/deploy/troubleshoot, prompt agent, managed harness agent, Copilot harness, voice agent, create/update/invoke/evaluate agent, add tool to agent, agent insights, batch/continuous eval, continuous monitoring, agent CI/CD, optimize/improve prompt, optimize agent instructions, Agent Optimizer, dataset curation from traces, deploy model, model fine-tuning (SFT/DPO/RFT), Foundry project, RBAC, role assignment, permissions, quota, capacity, region, deployment failure, AI Services, create Foundry resource, knowledge index, customize deployment, onboard, availability, training-data, grader, distillation, large file upload. DO NOT USE FOR: Azure Functions, App Service, general Azure deploy (use azure-deploy), general Azure prep (use azure-prepare).",
+        "source": "/Users/trinadhthatakula/.agents/skills/microsoft-foundry/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "ml-kit-genai-prompt-api",
+        "description": "Analyzes Android codebases to implement ML Kit GenAI Prompt API. Use",
+        "source": "/Users/trinadhthatakula/.agents/skills/ml-kit-genai-prompt-api/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "mlkit-agent-api",
+        "description": "Builds autonomous on-device agentic workflows in Android apps using the",
+        "source": "/Users/trinadhthatakula/.agents/skills/mlkit-agent-api/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "navigation-event",
+        "description": "Intercept back gestures and run Predictive Back animations using the",
+        "source": "/Users/trinadhthatakula/.agents/skills/navigation-event/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "play-policy-insights",
+        "description": "Automated auditor designed to verify Android applications against Google Play Policy domains. It cross-references static code analysis with Play Store declarations to generate deterministic compliance reports, identifying undeclared data collection, architectural risks, and missing disclosures across Permissions and APIs Hygiene, User Account and Identity, and Data Safety and Privacy domains.",
+        "source": "/Users/trinadhthatakula/.agents/skills/play-policy-insights/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "projected-hardware",
+        "description": "Provides instructions and workflows for accessing and managing hardware",
+        "source": "/Users/trinadhthatakula/.agents/skills/projected-hardware/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "projectforge",
+        "description": "Turn a project idea into a researched, implementation-ready kickoff specification with a right-sized specialist team, evidence-checked capability report, and consistent Markdown and offline HTML outputs.",
+        "source": "/Users/trinadhthatakula/.agents/skills/projectforge/SKILL.md; confirmed in active session inventory",
+        "status": "available"
+      },
+      {
+        "name": "restore-credentials",
+        "description": "Provides knowledge and workflows to implement Android's Restore Credentials",
+        "source": "/Users/trinadhthatakula/.agents/skills/restore-credentials/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "typesafe-ai",
+        "description": ">",
+        "source": "/Users/trinadhthatakula/.agents/skills/typesafe-ai/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "wear-compose-m3",
+        "description": "Guidance for Wear OS Compose Material3 (Wear Compose Material 3 / Wear",
+        "source": "/Users/trinadhthatakula/.agents/skills/wear-compose-m3/SKILL.md",
+        "status": "unverified"
+      },
+      {
+        "name": "wear-widgets",
+        "description": "Create, migrate, update, and verify Wear OS widgets using Glance Wear",
+        "source": "/Users/trinadhthatakula/.agents/skills/wear-widgets/SKILL.md",
+        "status": "unverified"
+      }
+    ],
+    "agents": [],
+    "tools": [
+      {
+        "name": "android-agent-brain",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "computer-use",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "node_repl",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "pycharm",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "studio",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "vercel",
+        "source": "/Users/trinadhthatakula/.codex/config.toml",
+        "status": "unverified"
+      },
+      {
+        "name": "exec_command",
+        "source": "active session inventory supplied by caller",
+        "status": "available"
+      },
+      {
+        "name": "collaboration.spawn_agent",
+        "source": "active session inventory supplied by caller",
+        "status": "available"
+      },
+      {
+        "name": "mcp__codex_apps__search_service_web_run",
+        "source": "active session inventory supplied by caller",
+        "status": "available"
+      }
+    ],
+    "role_matches": [
+      {
+        "role_id": "qa-test-engineer",
+        "requirements": [
+          {
+            "capability": "test strategy",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill testing-setup (/Users/trinadhthatakula/.codex/skills/testing-setup/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "QA role guide was read and acceptance criteria include keytool/apksigner differential and negative tests."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "A reproducible planning-level test strategy was drafted."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "A reproducible planning-level test strategy was drafted."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "automation",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 1.00)"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Node and node --test are available; a runner smoke test passed."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "partial",
+                  "evidence": [
+                    "A generated JKS was checked against keytool, but full application/browser automation has not been built."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Local test commands are allowed in this workspace."
+                  ]
+                },
+                "expected_output": {
+                  "status": "partial",
+                  "evidence": [
+                    "Node can report test results; project fixture and browser reports are not yet implemented."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "quality assurance",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "Test runners",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Node v26.13.1 node --test passed a local runner smoke test."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Android SDK build-tools apksigner and Java keytool respond to commands; actual application tests remain future work."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Android SDK build-tools apksigner and Java keytool respond to commands; actual application tests remain future work."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "device and browser matrix",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "CI reporting",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "unit",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "integration",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "ui",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "accessibility testing",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 0.50)",
+              "skill testing-setup (/Users/trinadhthatakula/.codex/skills/testing-setup/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "qa",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "testing",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 1.00)",
+              "skill testing-setup (/Users/trinadhthatakula/.codex/skills/testing-setup/SKILL.md; match 1.00)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "test automation",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "quality",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role_id": "security-engineer",
+        "requirements": [
+          {
+            "capability": "threat modeling",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Security role guide was read; project manifest contains data flows, risks, mitigations and owners."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The current agent runtime produced the project threat-model outline."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The current agent runtime produced the project threat-model outline."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "secure design",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The canonical manifest specifies browser-only file handling, secret non-transmission and signed APK negative cases."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Security design recommendations were produced; no implemented application was audited."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Security design recommendations were produced; no implemented application was audited."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "Threat modeling tools",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "dependency and code scanning tools",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "npm audit help is available; no application lockfile exists to scan."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "partial",
+                  "evidence": [
+                    "The npm audit command advertises dependency scanning; no audit or project code scan was run."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Local commands are permitted; registry access for the actual audit is unverified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "SAST",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "dependency audit",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "privacy review",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill play-policy-insights (/Users/trinadhthatakula/.agents/skills/play-policy-insights/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "security",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "skill android-intent-security (/Users/trinadhthatakula/.agents/skills/android-intent-security/SKILL.md; match 1.00)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "privacy",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "skill play-policy-insights (/Users/trinadhthatakula/.agents/skills/play-policy-insights/SKILL.md; match 1.00)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "authentication",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "authorization",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "encryption",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "threat",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role_id": "supervisor",
+        "requirements": [
+          {
+            "capability": "project synthesis",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill agp-9-upgrade (/Users/trinadhthatakula/.codex/skills/agp-9-upgrade/SKILL.md; match 0.50)",
+              "skill microsoft-foundry (/Users/trinadhthatakula/.agents/skills/microsoft-foundry/SKILL.md; match 0.50)",
+              "skill play-billing-library-version-upgrade (/Users/trinadhthatakula/.codex/skills/play-billing-library-version-upgrade/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge skill instructions inspected and a canonical tailored manifest created."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The supervisor can synthesize user requirements, research and release gates."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The supervisor can synthesize user requirements, research and release gates."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "risk and dependency management",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge dependency resolver was used and a risk register was written."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The supervisor can maintain named owners and dependencies."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "The supervisor can maintain named owners and dependencies."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "manifest validator",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Executed the ProjectForge validate command successfully against projectforge.json."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Validator reported schema validity and derived readiness gates."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Validator reported schema validity and derived readiness gates."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "repository inspection tools",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Executed rg and Git commands to inspect workspace and git state."
+                  ]
+                },
+                "instructions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "ProjectForge workflow and relevant selected role guide inspected."
+                  ]
+                },
+                "operation": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current session can read repository files and report evidence."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current runtime permits local workspace inspection and the performed operations."
+                  ]
+                },
+                "expected_output": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Current session can read repository files and report evidence."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "facilitation",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "technical writing",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill camerax (/Users/trinadhthatakula/.agents/skills/camerax/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "project planning",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill agp-9-upgrade (/Users/trinadhthatakula/.codex/skills/agp-9-upgrade/SKILL.md; match 0.50)",
+              "skill microsoft-foundry (/Users/trinadhthatakula/.agents/skills/microsoft-foundry/SKILL.md; match 0.50)",
+              "skill play-billing-library-version-upgrade (/Users/trinadhthatakula/.codex/skills/play-billing-library-version-upgrade/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "architecture",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "decision records",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill android-profiler (/Users/trinadhthatakula/.agents/skills/android-profiler/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role_id": "web-engineer",
+        "requirements": [
+          {
+            "capability": "web frontend engineering",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "browser compatibility",
+            "kind": "required",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "Browser devtools",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "No project-specific tool or implementation has been confirmed for this requirement."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Required project-specific operation has not been demonstrated."
+                  ]
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Access and permissions for the selected implementation tool have not been verified."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "frontend build and test tools",
+            "kind": "required",
+            "requirement_type": "tool",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "partially_verified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": "2026-11-19T19:21:28Z",
+              "recorded_by": "supervisor",
+              "checks": {
+                "accessibility": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Node, npm and Go are installed; an app-specific frontend build has not been installed or exercised."
+                  ]
+                },
+                "instructions": {
+                  "status": "partial",
+                  "evidence": [
+                    "Relevant selected role guide was inspected; implementation tool instructions remain to be checked."
+                  ]
+                },
+                "operation": {
+                  "status": "partial",
+                  "evidence": [
+                    "Go/WASM was compiled and run under Node; no browser app build was performed."
+                  ]
+                },
+                "permissions": {
+                  "status": "confirmed",
+                  "evidence": [
+                    "Local commands are permitted."
+                  ]
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": [
+                    "Expected project-specific output has not been demonstrated."
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "capability": "frontend testing",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 0.50)",
+              "skill testing-setup (/Users/trinadhthatakula/.codex/skills/testing-setup/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "performance profiling",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "partial",
+            "evidence": [
+              "skill android-profiler (/Users/trinadhthatakula/.agents/skills/android-profiler/SKILL.md; match 0.50)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "web",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "available",
+            "evidence": [
+              "skill android-for-cars-parked-apps (/Users/trinadhthatakula/.agents/skills/android-for-cars-parked-apps/SKILL.md; match 1.00)",
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 1.00)",
+              "tool mcp__codex_apps__search_service_web_run (active session inventory supplied by caller; match 1.00)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "frontend",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "browser",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "skill ego-browser (/Users/trinadhthatakula/.codex/skills/ego-browser/SKILL.md; match 1.00)"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "typescript",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "react",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "vue",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          },
+          {
+            "capability": "accessibility",
+            "kind": "optional",
+            "requirement_type": "capability",
+            "source": "role_profile",
+            "status": "unverified",
+            "evidence": [
+              "No matching local metadata; active session capability inventory is not confirmed"
+            ],
+            "verification": {
+              "status": "unverified",
+              "discovery_generated_at": "2026-11-19T19:19:28Z",
+              "recorded_at": null,
+              "recorded_by": null,
+              "checks": {
+                "accessibility": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "instructions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "operation": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "permissions": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                },
+                "expected_output": {
+                  "status": "unconfirmed",
+                  "evidence": []
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "gaps": [
+      "qa-test-engineer: automation is discovered as unverified and remains partially_verified",
+      "qa-test-engineer: quality assurance is discovered as unverified and remains partially_verified",
+      "qa-test-engineer: device and browser matrix is discovered as unverified and remains partially_verified",
+      "qa-test-engineer: CI reporting is discovered as unverified and remains partially_verified",
+      "security-engineer: Threat modeling tools is discovered as unverified and remains partially_verified",
+      "security-engineer: dependency and code scanning tools is discovered as unverified and remains partially_verified",
+      "web-engineer: web frontend engineering is discovered as unverified and remains partially_verified",
+      "web-engineer: browser compatibility is discovered as partial and remains partially_verified",
+      "web-engineer: Browser devtools is discovered as unverified and remains partially_verified",
+      "web-engineer: frontend build and test tools is discovered as unverified and remains partially_verified"
+    ]
+  },
+  "team": {
+    "approval_status": "proposed",
+    "selection_mode": "manual",
+    "supervisor": {
+      "id": "supervisor",
+      "role_id": "supervisor",
+      "name": "Supervisor / Technical Lead",
+      "mission": "Own the canonical project specification and coordinate delivery.",
+      "responsibilities": [
+        "Resolve conflicting recommendations",
+        "Maintain scope, manifest, milestones, risks, and decisions",
+        "Own UX flow and local worker result contract; there is no server API.",
+        "Resolve Android signing/API-range decisions and retain incomplete feasibility gates.",
+        "Collect findings from every specialist and reconcile the outputs.",
+        "Resolve the supervisor role prerequisites by reviewing findings from every specialist and accepting product/architecture choices before implementation handoff."
+      ],
+      "exclusions": [
+        "Does not own every implementation workstream",
+        "Does not present assumptions as verified facts"
+      ],
+      "inputs": [
+        "Accepted project manifest and relevant repository evidence",
+        "Prerequisite: Receives findings from all specialists",
+        "Prerequisite: Architecture and product choices precede implementation assignments",
+        "User-confirmed browser-local processing and large APK requirements.",
+        "ProjectForge manifest and independently checked specialist findings."
+      ],
+      "outputs": [
+        "authoritative project specification",
+        "team plan",
+        "decision and risk registers"
+      ],
+      "prerequisites": [
+        "Receives findings from all specialists",
+        "Architecture and product choices precede implementation assignments"
+      ],
+      "dependencies": [],
+      "result_contract": {
+        "protocol_version": "1.0.0",
+        "expected_output_format": "provider-neutral JSON result with explicitly authorized artifacts",
+        "allowed_paths": [
+          "projectforge.json",
+          "keystore-validator-kickoff.md",
+          "keystore-validator-kickoff.html"
+        ],
+        "protected_paths": [
+          "src/",
+          "tests/",
+          "public/",
+          "**/*.jks",
+          "**/*.keystore",
+          ".env"
+        ],
+        "required_checks": [
+          "ProjectForge validate",
+          "Render both documents from canonical manifest"
+        ],
+        "completion_criteria": [
+          "All requirements, risks and open gates have owners.",
+          "Manifest and rendered documents agree."
+        ]
+      },
+      "acceptance_criteria": [
+        "All work has an owner and handoff",
+        "manifest and generated docs agree"
+      ],
+      "handoff_requirements": [
+        "Give bounded briefs with inputs, outputs, and acceptance criteria",
+        "Return unresolved user-owned decisions to the user"
+      ],
+      "required_capabilities": [
+        "project synthesis",
+        "risk and dependency management"
+      ],
+      "supporting_skills": [
+        "project planning",
+        "architecture",
+        "decision records"
+      ]
+    },
+    "specialists": [
+      {
+        "id": "web-engineer",
+        "role_id": "web-engineer",
+        "name": "Web Engineer",
+        "mission": "Build the browser-local UI and prove a safe signing engine before integration.",
+        "responsibilities": [
+          "Implement accessible file selection, alias selection, status states, worker cancellation, local comparison and static hosting configuration.",
+          "Prototype browser-compatible JKS inspection and APK verification, recording supported formats, schemes and memory behavior.",
+          "Deliver a typed local worker result contract and maintain code ownership for browser application assets."
+        ],
+        "exclusions": [
+          "Do not transmit user files, passwords, private keys or results.",
+          "Do not claim APK verification for unsupported signing schemes or browser environments.",
+          "Do not alter the supervisor manifest or QA/security-owned files."
+        ],
+        "inputs": [
+          "Accepted project manifest and relevant repository evidence",
+          "Prerequisite: UX flows",
+          "Prerequisite: API contract",
+          "Confirmed privacy and >=100 MB APK requirements.",
+          "Supervisor UX flow, signing criteria and local worker contract.",
+          "Relevant security and QA feedback."
+        ],
+        "outputs": [
+          "Browser application and worker implementation",
+          "Browser-engine feasibility report and Vercel static build instructions"
+        ],
+        "prerequisites": [
+          "UX flows",
+          "API contract"
+        ],
+        "dependencies": [],
+        "result_contract": {
+          "protocol_version": "1.0.0",
+          "expected_output_format": "provider-neutral JSON result with explicitly authorized artifacts",
+          "allowed_paths": [
+            "src/",
+            "public/",
+            "research/",
+            "package.json",
+            "package-lock.json",
+            "tsconfig.json",
+            "vite.config.ts",
+            "vercel.json"
+          ],
+          "protected_paths": [
+            "projectforge.json",
+            "keystore-validator-kickoff.md",
+            "keystore-validator-kickoff.html",
+            "tests/",
+            "docs/security/",
+            "docs/testing/",
+            "**/*.jks",
+            "**/*.keystore",
+            ".env"
+          ],
+          "required_checks": [
+            "Build the browser app",
+            "Run agreed worker and differential tests",
+            "Measure >=100 MB APK memory and responsiveness"
+          ],
+          "completion_criteria": [
+            "JKS and APK processing remain local; each UI state and error is accessible.",
+            "Browser candidate passes agreed differential, large-file, signature and alias tests before a verified result is displayed."
+          ]
+        },
+        "acceptance_criteria": [
+          "JKS and APK processing remain local; each UI state and error is accessible.",
+          "Browser candidate passes agreed differential, large-file, signature and alias tests before a verified result is displayed."
+        ],
+        "handoff_requirements": [
+          "Publish the local result/error contract and supported scheme/browser/API matrix to QA and Security.",
+          "Report peak-memory limits, unsupported inputs, dependencies and licenses to the supervisor."
+        ],
+        "required_capabilities": [
+          "web frontend engineering",
+          "browser compatibility"
+        ],
+        "supporting_skills": [
+          "web",
+          "frontend",
+          "browser",
+          "typescript",
+          "react",
+          "vue",
+          "accessibility"
+        ]
+      },
+      {
+        "id": "security-engineer",
+        "role_id": "security-engineer",
+        "name": "Security Engineer",
+        "mission": "Review privacy boundaries and Android signing correctness for the browser-only product.",
+        "responsibilities": [
+          "Model data flows and threats, including hosted-code and dependency compromise.",
+          "Specify signature-scheme, multiple-signer and key-rotation verification requirements with Android platform evidence.",
+          "Review dependency provenance and the results of privacy and malformed-input testing."
+        ],
+        "exclusions": [
+          "Do not implement or modify browser source, test fixtures or user files.",
+          "Do not assert the application is secure based solely on design review."
+        ],
+        "inputs": [
+          "Accepted project manifest and relevant repository evidence",
+          "Prerequisite: architecture",
+          "Prerequisite: data flows",
+          "Browser architecture, worker contract and candidate engine research.",
+          "Official Android apksigner and Google Play app-signing documentation."
+        ],
+        "outputs": [
+          "Threat model with owners and mitigations",
+          "Signing scheme and verifier review",
+          "Security and privacy release checklist"
+        ],
+        "prerequisites": [
+          "architecture",
+          "data flows"
+        ],
+        "dependencies": [],
+        "result_contract": {
+          "protocol_version": "1.0.0",
+          "expected_output_format": "provider-neutral JSON result with explicitly authorized artifacts",
+          "allowed_paths": [
+            "docs/security/"
+          ],
+          "protected_paths": [
+            "projectforge.json",
+            "src/",
+            "tests/",
+            "public/",
+            "**/*.jks",
+            "**/*.keystore",
+            ".env"
+          ],
+          "required_checks": [
+            "Trace every security requirement to a verification step",
+            "Review signing evidence and dependency licenses"
+          ],
+          "completion_criteria": [
+            "Each material threat has an asset, attack path, mitigation, owner and check.",
+            "Verified and unsupported signing behaviors are explicitly separated and any residual risks are recorded."
+          ]
+        },
+        "acceptance_criteria": [
+          "Each material threat has an asset, attack path, mitigation, owner and check.",
+          "Verified and unsupported signing behaviors are explicitly separated and any residual risks are recorded."
+        ],
+        "handoff_requirements": [
+          "Provide reproducible attack/negative tests and unresolved engine gaps to web and QA.",
+          "Escalate any threat that would expose private keys or cause false-positive matches."
+        ],
+        "required_capabilities": [
+          "threat modeling",
+          "secure design"
+        ],
+        "supporting_skills": [
+          "security",
+          "privacy",
+          "authentication",
+          "authorization",
+          "encryption",
+          "threat"
+        ]
+      },
+      {
+        "id": "qa-test-engineer",
+        "role_id": "qa-test-engineer",
+        "name": "QA / Test Engineer",
+        "mission": "Test certificate fingerprints, APK signature outcomes, privacy and large-file behavior.",
+        "responsibilities": [
+          "Generate disposable test-only JKS and APK fixtures; never use real developer keys.",
+          "Create automated keytool and apksigner differential checks, including valid, wrong-password, malformed, tampered, unsigned, multiple-signer and rotation inputs.",
+          "Verify network isolation, accessibility and large-file behavior on a stated browser matrix."
+        ],
+        "exclusions": [
+          "Do not modify application source or production credentials.",
+          "Do not claim unrun tests passed or infer real browser results from Node/WASM."
+        ],
+        "inputs": [
+          "Accepted project manifest and relevant repository evidence",
+          "Prerequisite: acceptance criteria",
+          "Prerequisite: testable interfaces",
+          "Supervisor acceptance criteria.",
+          "Web worker result contract and selected browser engine.",
+          "Security negative-test plan and supported Android API interval."
+        ],
+        "outputs": [
+          "Test suite, generated-fixture instructions and coverage matrix",
+          "Reproducible browser, network and large-file release report"
+        ],
+        "prerequisites": [
+          "acceptance criteria",
+          "testable interfaces"
+        ],
+        "dependencies": [],
+        "result_contract": {
+          "protocol_version": "1.0.0",
+          "expected_output_format": "provider-neutral JSON result with explicitly authorized artifacts",
+          "allowed_paths": [
+            "tests/",
+            "docs/testing/"
+          ],
+          "protected_paths": [
+            "projectforge.json",
+            "src/",
+            "public/",
+            "docs/security/",
+            ".env"
+          ],
+          "required_checks": [
+            "Run fixtures through keytool and apksigner",
+            "Run browser network and >=100 MB checks",
+            "Run accessibility and negative-path tests"
+          ],
+          "completion_criteria": [
+            "Every critical requirement maps to a documented test or explicit unverified gap.",
+            "No mismatch with keytool or apksigner is unresolved before release."
+          ]
+        },
+        "acceptance_criteria": [
+          "Every critical requirement maps to a documented test or explicit unverified gap.",
+          "No mismatch with keytool or apksigner is unresolved before release."
+        ],
+        "handoff_requirements": [
+          "Report commands, environment versions, expected and actual results, and unrun checks to the supervisor.",
+          "Record browser and memory limits and label unsupported signing cases as unverifiable."
+        ],
+        "required_capabilities": [
+          "test strategy",
+          "automation",
+          "quality assurance"
+        ],
+        "supporting_skills": [
+          "qa",
+          "testing",
+          "test automation",
+          "quality",
+          "accessibility testing"
+        ]
+      }
+    ],
+    "rationale": [
+      "Web Engineer: project signal matches 'web'; project signal matches 'browser'; project signal matches 'typescript'; project signal matches 'browser storage'",
+      "Security Engineer: project signal matches 'security'; project signal matches 'privacy'",
+      "QA / Test Engineer: open question or assumption matches 'testing'",
+      "Resolve 8 role prerequisite(s) before finalizing the execution schedule; no provider or relationship was guessed.",
+      "Use three specialists plus the supervisor: web owns the browser application and static deployment, security owns threat review and signing semantics, and QA owns differential and browser testing.",
+      "Android signing expertise is included in the security and QA assignments as a bounded consultation, without adding an Android application engineer.",
+      "Optimization scores and orchestration token estimates are planning heuristics based on role profiles and project signals, not measured runtime costs.",
+      "Current consultations ran in parallel using the session agent runtime; the implementation roster and assignments remain proposed."
+    ],
+    "optimization": {
+      "mode": "standard",
+      "coordination_score": 8.46,
+      "estimated_input_tokens": 8200,
+      "estimated_output_tokens": 5250,
+      "handoffs": 0,
+      "metrics": {
+        "role_relevance": [
+          {
+            "role_id": "web-engineer",
+            "score": 10.0,
+            "signals": [
+              "project signal matches 'web'",
+              "project signal matches 'browser'",
+              "project signal matches 'typescript'",
+              "project signal matches 'browser storage'"
+            ]
+          },
+          {
+            "role_id": "security-engineer",
+            "score": 5.0,
+            "signals": [
+              "project signal matches 'security'",
+              "project signal matches 'privacy'"
+            ]
+          },
+          {
+            "role_id": "qa-test-engineer",
+            "score": 1.5,
+            "signals": [
+              "open question or assumption matches 'testing'"
+            ]
+          }
+        ],
+        "role_overlap": {
+          "pair_count": 0,
+          "pairs": []
+        },
+        "workstream_independence": {
+          "score": 1.0,
+          "basis": "1 minus overlapping role pairs divided by all possible specialist pairs; a one-role team scores 1.0."
+        },
+        "coordination_overhead": {
+          "score": 8.46,
+          "handoffs": 0,
+          "basis": "Team-size, handoff, and project-complexity planning heuristic; lower is simpler."
+        },
+        "context_requirements": {
+          "estimated_input_tokens": 8200,
+          "project_complexity_units": 10,
+          "per_role": [
+            {
+              "role_id": "web-engineer",
+              "required_capability_count": 4,
+              "deliverable_count": 3,
+              "research_method_count": 2,
+              "estimated_input_tokens": 1500
+            },
+            {
+              "role_id": "security-engineer",
+              "required_capability_count": 4,
+              "deliverable_count": 3,
+              "research_method_count": 2,
+              "estimated_input_tokens": 1500
+            },
+            {
+              "role_id": "qa-test-engineer",
+              "required_capability_count": 6,
+              "deliverable_count": 3,
+              "research_method_count": 2,
+              "estimated_input_tokens": 1500
+            }
+          ],
+          "basis": "Planning estimate uses 2,500 supervisor input tokens, 1,500 per specialist, and 120 per feature or architecture component."
+        },
+        "research_complexity": {
+          "score": 3.0,
+          "research_method_count": 6,
+          "basis": "Average number of catalogue research methods per selected role, multiplied by 1.5 and capped at 10."
+        },
+        "integration_complexity": {
+          "score": 4.25,
+          "basis": "Heuristic: 1 + 0.75 per specialist + 0.8 per overlap pair + 0.6 per manifest dependency + 0.25 per architecture component, capped at 10."
+        },
+        "handoffs": 0,
+        "expected_review_effort_points": 11.0,
+        "review_effort_basis": "Uncalibrated points: 2 supervisor points, 1 per specialist, 0.5 per catalogue deliverable, and 0.25 per acceptance criterion."
+      }
+    }
+  },
+  "execution": {
+    "protocol_version": "1.0.0",
+    "results": [],
+    "events": [
+      {
+        "event_id": "df97d55d-3745-4dde-8199-970ae6ed5ab1",
+        "occurred_at": "2026-11-19T19:17:35Z",
+        "event_type": "manifest_initialized"
+      },
+      {
+        "event_id": "55a51905-c21c-4673-a409-0ee34e9b9a2f",
+        "occurred_at": "2026-11-19T19:19:17Z",
+        "event_type": "team_plan_applied",
+        "affected_count": 3
+      },
+      {
+        "event_id": "96ff26df-72e1-4217-ae97-d1a48141aed1",
+        "occurred_at": "2026-11-19T19:19:28Z",
+        "event_type": "capability_discovery_applied",
+        "affected_count": 49
+      },
+      {
+        "event_id": "66a5be3a-fd30-478d-b5bd-08f83fa73a25",
+        "occurred_at": "2026-11-19T19:20:17Z",
+        "event_type": "dependency_resolution_applied",
+        "affected_count": 6
+      },
+      {
+        "event_id": "56512022-1f13-4493-9e98-bca7d18589fc",
+        "occurred_at": "2026-11-19T19:21:29Z",
+        "event_type": "capability_verification_applied",
+        "affected_count": 18
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "from": "web-engineer",
+      "to": "supervisor",
+      "kind": "blocks",
+      "prerequisite": "UX flows",
+      "resolution_source": "role_prerequisite"
+    },
+    {
+      "from": "web-engineer",
+      "to": "supervisor",
+      "kind": "informs",
+      "prerequisite": "API contract",
+      "resolution_source": "role_prerequisite"
+    },
+    {
+      "from": "security-engineer",
+      "to": "web-engineer",
+      "kind": "informs",
+      "prerequisite": "architecture",
+      "resolution_source": "role_prerequisite"
+    },
+    {
+      "from": "security-engineer",
+      "to": "supervisor",
+      "kind": "informs",
+      "prerequisite": "data flows",
+      "resolution_source": "role_prerequisite"
+    },
+    {
+      "from": "qa-test-engineer",
+      "to": "supervisor",
+      "kind": "blocks",
+      "prerequisite": "acceptance criteria",
+      "resolution_source": "role_prerequisite"
+    },
+    {
+      "from": "qa-test-engineer",
+      "to": "web-engineer",
+      "kind": "blocks",
+      "prerequisite": "testable interfaces",
+      "resolution_source": "role_prerequisite"
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "feasibility",
+      "name": "Browser signing proof of concept and evidence",
+      "owner": "web-engineer",
+      "status": "planned",
+      "acceptance_criteria": [
+        "Prove JKS integrity and alias reading without private-key decryption.",
+        "Prove verified APK signature, DER extraction and >=100 MB handling against keytool and apksigner fixtures.",
+        "Record supported signature schemes, API ranges, licenses, memory use and remaining gaps."
+      ]
+    },
+    {
+      "id": "browser-app",
+      "name": "Browser-local validator",
+      "owner": "web-engineer",
+      "status": "planned",
+      "acceptance_criteria": [
+        "Implement all must-have flows, accessibility and clear failure states.",
+        "No user file, password or private key is sent over the network."
+      ]
+    },
+    {
+      "id": "verification",
+      "name": "Security and differential test report",
+      "owner": "security-engineer",
+      "status": "planned",
+      "acceptance_criteria": [
+        "Review worker/asset trust boundaries and dependency provenance.",
+        "Document keytool/apksigner comparison and browser/network/large-file test results."
+      ]
+    },
+    {
+      "id": "release",
+      "name": "Vercel Hobby release and developer instructions",
+      "owner": "supervisor",
+      "status": "planned",
+      "acceptance_criteria": [
+        "Static preview passes release checks; write reproducible build/deploy instructions.",
+        "Confirm acceptable Hobby use and current usage limits before publication."
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "m1",
+      "name": "Feasibility spike",
+      "target": "First: prove browser JKS and APK verification with representative fixtures and >=100 MB APKs.",
+      "depends_on": []
+    },
+    {
+      "id": "m2",
+      "name": "Implement local validation",
+      "target": "After engine acceptance: implement UI, workers, matching and clear unsupported states.",
+      "depends_on": [
+        "m1"
+      ]
+    },
+    {
+      "id": "m3",
+      "name": "Security and cross-browser release checks",
+      "target": "Before release: differential, privacy/network, accessibility and resource tests.",
+      "depends_on": [
+        "m2"
+      ]
+    },
+    {
+      "id": "m4",
+      "name": "Deploy static preview",
+      "target": "After successful release checks: preview on Vercel Hobby and validate hosting behavior.",
+      "depends_on": [
+        "m3"
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "false-positive",
+      "description": "Extracted certificates can match even when an APK is tampered or signed under unsupported schemes.",
+      "likelihood": "medium",
+      "impact": "high",
+      "mitigation": "Require cryptographic signature verification for a verified match; cross-test tampered and unsupported inputs against apksigner.",
+      "owner": "security-engineer"
+    },
+    {
+      "id": "engine",
+      "description": "Existing browser engines may not support required JKS integrity, all APK schemes, rotation or certificate extraction reliably.",
+      "likelihood": "high",
+      "impact": "high",
+      "mitigation": "Complete a separately reviewed proof of concept and differential tests; keep unsupported cases unverifiable and do not promise support without evidence.",
+      "owner": "web-engineer"
+    },
+    {
+      "id": "memory",
+      "description": "A 100 MB APK may trigger much larger memory use if JavaScript and WASM each retain copies.",
+      "likelihood": "high",
+      "impact": "high",
+      "mitigation": "Measure peak memory, explore chunked/random-access APIs, and publish tested browser limits; provide clear failures and cancellation.",
+      "owner": "web-engineer"
+    },
+    {
+      "id": "supply-chain",
+      "description": "Compromised hosted JavaScript, dependencies, or browser extensions could expose secrets despite browser-local processing.",
+      "likelihood": "medium",
+      "impact": "high",
+      "mitigation": "Review and pin dependencies; use same-origin assets and CSP; validate no sensitive traffic and document hosting trust.",
+      "owner": "security-engineer"
+    },
+    {
+      "id": "play",
+      "description": "Google Play may sign distributed APKs with a different key from the developer upload key or a rotated key.",
+      "likelihood": "medium",
+      "impact": "medium",
+      "mitigation": "Identify active versus historical signers and explain upload versus app signing keys.",
+      "owner": "supervisor"
+    },
+    {
+      "id": "hobby",
+      "description": "Hobby terms, usage ceilings or browser limitations may not fit eventual usage.",
+      "likelihood": "unknown",
+      "impact": "medium",
+      "mitigation": "Confirm personal non-commercial use, deployment limits, tested browsers and bandwidth before release.",
+      "owner": "supervisor"
+    },
+    {
+      "id": "differential",
+      "description": "A candidate browser verifier rejects an apksigner-accepted v2 APK for the same API range; individual signer flags may remain true even when a tampered APK fails.",
+      "likelihood": "high",
+      "impact": "high",
+      "mitigation": "Investigate and correct or replace the engine, compare overall validity and signer identities against apksigner, and gate positive matches on the overall verified outcome.",
+      "owner": "security-engineer"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "browser-target",
+      "statement": "Recent desktop Chromium, Firefox and Safari can be considered target browsers, subject to browser-engine tests.",
+      "validation_action": "Run the proof of concept and browser matrix before declaring support.",
+      "owner": "qa-test-engineer",
+      "status": "open"
+    },
+    {
+      "id": "no-account",
+      "statement": "Users do not need accounts, shared history or server persistence.",
+      "validation_action": "Reconfirm before adding any persistent feature.",
+      "owner": "supervisor",
+      "status": "open"
+    },
+    {
+      "id": "language",
+      "statement": "TypeScript is a suitable browser runtime, with Python optional only for local development and testing.",
+      "validation_action": "Verify worker/WASM integration, available tooling and reviewed library licenses during the feasibility spike.",
+      "owner": "web-engineer",
+      "status": "open"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "local",
+      "question": "Where will APK and keystore processing take place?",
+      "status": "confirmed",
+      "owner": "supervisor",
+      "required": true,
+      "selected": "Locally in the browser, with no private keys, passwords or files sent to the server.",
+      "options": [
+        "Browser local",
+        "Server processing"
+      ],
+      "rationale": "User explicitly confirmed both file types must be handled in the browser."
+    },
+    {
+      "id": "runtime",
+      "question": "Which application implementation language should be used?",
+      "status": "recommended",
+      "owner": "web-engineer",
+      "required": false,
+      "selected": "TypeScript for browser code; optional Python for offline fixture tooling.",
+      "options": [
+        "TypeScript with reviewed WASM engine",
+        "Python server"
+      ],
+      "rationale": "The user permits an alternative to Python; browser execution avoids file uploads."
+    },
+    {
+      "id": "engine",
+      "question": "Which browser-compatible JKS and APK verification engines are suitable?",
+      "status": "pending",
+      "owner": "web-engineer",
+      "required": true,
+      "selected": null,
+      "options": [
+        "Independently evaluate and adapt a JKS parser and APK verifier",
+        "Select an alternative reviewed engine after prototyping"
+      ],
+      "rationale": "Candidates have not demonstrated integrity checks, safe alias access, complete signature/rotation semantics and memory behavior. No engine should be called verified before independent tests."
+    },
+    {
+      "id": "api-range",
+      "question": "Which Android API range and signing schemes will the first release verify?",
+      "status": "pending",
+      "owner": "security-engineer",
+      "required": true,
+      "selected": null,
+      "options": [
+        "Set a tested API interval and explicitly list scheme coverage",
+        "Report unsupported schemes as unverifiable"
+      ],
+      "rationale": "Android scheme and key-rotation behavior varies by platform; an explicit tested interval is required for a valid verification claim."
+    },
+    {
+      "id": "browser-support",
+      "question": "Which browsers and device classes will be officially supported?",
+      "status": "pending",
+      "owner": "qa-test-engineer",
+      "required": false,
+      "selected": null,
+      "options": [
+        "Recent desktop Chromium, Firefox, Safari after tests",
+        "A narrower tested set"
+      ],
+      "rationale": "Performance and WASM compatibility have not been measured."
+    }
+  ],
+  "cost_estimate": {
+    "currency": "UNSPECIFIED",
+    "total_amount": null,
+    "confidence": "unknown",
+    "items": [],
+    "token_estimate": {
+      "input": 0,
+      "output": 0,
+      "method": "Not estimated."
+    },
+    "assumptions": []
+  },
+  "output_preferences": {
+    "formats": [
+      "markdown",
+      "html"
+    ],
+    "include_architecture_diagram": true,
+    "include_team_contracts": true
+  },
+  "readiness": {
+    "status": "needs_input",
+    "blockers": [
+      "readiness.status cannot be 'ready' until the proposed team is accepted",
+      "required decision 'engine' is pending",
+      "required decision 'api-range' is pending",
+      "required capability 'qa-test-engineer': 'automation' is partially_verified (discovery: unverified)",
+      "required capability 'qa-test-engineer': 'quality assurance' is partially_verified (discovery: unverified)",
+      "required capability 'qa-test-engineer': 'device and browser matrix' is partially_verified (discovery: unverified)",
+      "required capability 'qa-test-engineer': 'CI reporting' is partially_verified (discovery: unverified)",
+      "required capability 'security-engineer': 'Threat modeling tools' is partially_verified (discovery: unverified)",
+      "required capability 'security-engineer': 'dependency and code scanning tools' is partially_verified (discovery: unverified)",
+      "required capability 'web-engineer': 'web frontend engineering' is partially_verified (discovery: unverified)",
+      "required capability 'web-engineer': 'browser compatibility' is partially_verified (discovery: partial)",
+      "required capability 'web-engineer': 'Browser devtools' is partially_verified (discovery: unverified)",
+      "required capability 'web-engineer': 'frontend build and test tools' is partially_verified (discovery: unverified)"
+    ],
+    "capability_plans": [
+      {
+        "role_id": "qa-test-engineer",
+        "capability": "automation",
+        "owner": "qa-test-engineer",
+        "next_action": "Build and run fixture, network and browser automation once an application exists."
+      },
+      {
+        "role_id": "qa-test-engineer",
+        "capability": "quality assurance",
+        "owner": "qa-test-engineer",
+        "next_action": "Execute the critical acceptance matrix and document results and gaps."
+      },
+      {
+        "role_id": "qa-test-engineer",
+        "capability": "device and browser matrix",
+        "owner": "qa-test-engineer",
+        "next_action": "Select and access target browsers, then run >=100 MB and network tests."
+      },
+      {
+        "role_id": "qa-test-engineer",
+        "capability": "CI reporting",
+        "owner": "qa-test-engineer",
+        "next_action": "Configure a project CI runner and verify its test report artifacts."
+      },
+      {
+        "role_id": "security-engineer",
+        "capability": "Threat modeling tools",
+        "owner": "security-engineer",
+        "next_action": "Select or demonstrate a practical threat-modeling workflow and retain its output."
+      },
+      {
+        "role_id": "security-engineer",
+        "capability": "dependency and code scanning tools",
+        "owner": "security-engineer",
+        "next_action": "Create the selected lockfile and execute dependency plus source scans; record results."
+      },
+      {
+        "role_id": "web-engineer",
+        "capability": "web frontend engineering",
+        "owner": "web-engineer",
+        "next_action": "Implement the chosen browser UI/worker and verify build and behavior."
+      },
+      {
+        "role_id": "web-engineer",
+        "capability": "browser compatibility",
+        "owner": "web-engineer",
+        "next_action": "Exercise the chosen engine in the supported real browser matrix."
+      },
+      {
+        "role_id": "web-engineer",
+        "capability": "Browser devtools",
+        "owner": "web-engineer",
+        "next_action": "Access a target browser and verify network inspection and console output."
+      },
+      {
+        "role_id": "web-engineer",
+        "capability": "frontend build and test tools",
+        "owner": "web-engineer",
+        "next_action": "Select and run the project-specific browser build and tests."
+      }
+    ],
+    "checked_at": "2026-11-19T19:19:03.877692+00:00"
+  },
+  "change_log": [],
+  "extensions": {}
+}

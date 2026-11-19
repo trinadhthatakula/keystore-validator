@@ -1,0 +1,1 @@
+This is MIT-licensed keystore-go/v4 v4.5.0. Only common.go is patched: JKS integrity passwords are represented as Java UTF-16 code units, so passwordBytes converts UTF-8 to UTF-16BE instead of widening UTF-8 bytes. The caller validates all lengths and counts before invoking the upstream decoder.

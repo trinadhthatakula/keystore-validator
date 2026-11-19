@@ -1,0 +1,9 @@
+{
+  "sourceSha256": "cbfc8916ef09a5274c30f58bc78065b1ef5e3db10d0dbdfcd0ba661c44f49a0b",
+  "goVersion": "go version go1.27.4 darwin/arm64",
+  "assets": {
+    "public/jks.wasm": "c55b24858a7c57d6d277333780dc0acdbb59629e36e0292bb82c7146ed3de285",
+    "public/apk-engine.wasm": "e30d81f392dd29fa87c1178a0fcac69a3dac306a8d115681fb6ecd0c56f6b32a",
+    "public/wasm_exec.js": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14"
+  }
+}

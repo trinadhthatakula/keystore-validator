@@ -1,0 +1,26 @@
+{
+  "name": "keystore-validator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "build:wasm": "sh scripts/build-jks-engine.sh public && sh scripts/build-apk-engine.sh && node scripts/wasm-manifest.mjs write",
+    "test": "npm run test:jks && npm run test:pkcs12 && npm run test:apk",
+    "test:jks": "cd engine/jks && go test ./...",
+    "test:apk": "cd engine/apk && go test ./...",
+    "prebuild": "node scripts/wasm-manifest.mjs check",
+    "test:integration": "sh engine/jks/tests/run.sh && sh tests/apk-differential.sh",
+    "test:pkcs12": "cd engine/jks/pkcs12 && go test ./...",
+    "test:bouncycastle": "sh engine/jks/bks/test-integration.sh"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "8.3.8"
+  }
+}

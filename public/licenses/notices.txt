@@ -1,0 +1,8 @@
+Keystore Validator includes the following components:
+
+- apksig-go v1.1.0, Apache License 2.0; see apksig-go.txt and apksig-go-notice.txt.
+- keystore-go v4.5.0, MIT License; see keystore-go.txt. The project includes local fixes recorded in engine/jks/keystore/LOCAL_PATCHES.md.
+- Go runtime and standard library, BSD-style license; see go.txt.
+- SSLMate go-pkcs12 v0.7.1, BSD license; see sslmate-pkcs12.txt. Local inspection-only and safety changes are described in engine/jks/pkcs12/LOCAL_PATCHES.md.
+- Pion DTLS v3.1.15 CCM implementation, MIT license; see pion-dtls.txt.
+- Go x/crypto v0.48.0 Twofish implementation, BSD license; see go-x-crypto.txt.

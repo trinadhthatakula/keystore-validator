@@ -1,0 +1,36 @@
+# Upload only files needed to build the static application.
+/*
+!/index.html
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/vite.config.ts
+!/vercel.json
+!/scripts/
+!/src/
+!/public/
+!/engine/
+
+# Never upload common signing material, even if placed in an allowed directory.
+*.jks
+*.keystore
+*.ks
+*.jceks
+*.bks
+*.bcfks
+*.uber
+*.p12
+*.pfx
+*.pem
+*.key
+*.pk8
+*.p8
+*.der
+*.cer
+*.crt
+*.apk
+*.aab
+*.idsig
+.env
+.env.*
+/engine/jks/dist/

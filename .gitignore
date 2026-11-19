@@ -1,0 +1,28 @@
+# Private signing material and uploaded app packages
+*.jks
+*.keystore
+*.jceks
+*.bks
+*.bcfks
+*.uber
+*.ks
+*.p12
+*.pfx
+*.key
+*.pk8
+*.der
+*.pem
+*.apk
+*.aab
+*.idsig
+.env
+.env.*
+
+# Local build and tooling output
+node_modules/
+dist/
+.vercel/
+.venv/
+__pycache__/
+.pytest_cache/
+.DS_Store
