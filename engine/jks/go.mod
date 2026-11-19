@@ -1,11 +1,11 @@
 module keystorevalidator/jks
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pion/dtls/v3 v3.1.15
-	golang.org/x/crypto v0.48.0
+	golang.org/x/crypto v0.59.0
 	software.sslmate.com/src/go-pkcs12 v0.7.1
 )
 

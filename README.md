@@ -30,7 +30,9 @@ npm run build
 npm run preview
 ```
 
-`npm run build` uses the included, checksum-checked WASM assets, so Go is not required on Vercel. If the engine source changes, rebuild those assets with Go 1.24 or newer using `npm run build:wasm`, then include the updated files under `public/` with your changes. The current assets were built with Go 1.27.4.
+`npm run build` uses the included, checksum-checked WASM assets, so Go is not required on Vercel. If the engine source changes, rebuild those assets with Go 1.26 or newer using `npm run build:wasm`, then include the updated files under `public/` with your changes. The current assets were built with Go 1.27.4.
+
+Dependabot checks for dependency updates weekly. Go dependency update pull requests also need the WASM assets rebuilt before they can pass the production build.
 
 Vercel can build this as a Vite project using `npm run build` and the `dist` output directory. The static security headers are configured in `vercel.json`; local preview uses those same headers. `.vercelignore` excludes common signing files from CLI uploads and restricts the deployment inputs. No server function or environment variable is required.
 

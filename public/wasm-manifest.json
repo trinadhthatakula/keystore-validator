@@ -1,9 +1,9 @@
 {
-  "sourceSha256": "cbfc8916ef09a5274c30f58bc78065b1ef5e3db10d0dbdfcd0ba661c44f49a0b",
+  "sourceSha256": "7f4a29cadf988ba525245cff2ff4471f22c1ae9e3c5b61b0a9fd5bfbcc32e3d3",
   "goVersion": "go version go1.27.4 darwin/arm64",
   "assets": {
-    "public/jks.wasm": "c55b24858a7c57d6d277333780dc0acdbb59629e36e0292bb82c7146ed3de285",
-    "public/apk-engine.wasm": "e30d81f392dd29fa87c1178a0fcac69a3dac306a8d115681fb6ecd0c56f6b32a",
+    "public/jks.wasm": "0f37a5a0e5fd286984ca2de6a8acdf8c57f76ec40ebefcf2edd38e82945c6452",
+    "public/apk-engine.wasm": "d81e29b957f129a469cf9928e5823356bb17dd612ce5e629528e197bc5d4d375",
     "public/wasm_exec.js": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14"
   }
 }
